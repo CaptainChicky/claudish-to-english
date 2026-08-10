@@ -27,7 +27,7 @@
 # Config (all via env, with safe defaults):
 #   CLAUDISH_ENABLED   1|0            master switch (default 1)
 #   CLAUDISH_MODE      append|replace display strategy (default append)
-#   CLAUDISH_MODEL     <ollama model> (default llama3.2:3b)
+#   CLAUDISH_MODEL     <ollama model> (default gemma4:26b-mlx)
 #   CLAUDISH_OLLAMA    <base url>     (default http://localhost:11434)
 #   CLAUDISH_MIN_CHARS <n>            skip messages shorter than this
 #                                           (prose, code stripped) (default 200)
@@ -35,14 +35,16 @@
 #                                           (for display-mechanics testing)
 #   CLAUDISH_TIMEOUT   <seconds>      LLM client timeout (default 45)
 #   CLAUDISH_DEBUG     1|0            write a debug log (default 0)
-#   CLAUDISH_NOTICE    1|0            once-per-session on-screen notice when
-#                                           ollama is unreachable (default 1)
+#   CLAUDISH_NOTICE    1|0            once-per-session on-screen notice when the
+#                                           rewrite is skipped because ollama is
+#                                           unreachable, times out, or the model
+#                                           is missing (default 1)
 # ---------------------------------------------------------------------------
 set -uo pipefail
 
 ENABLED="${CLAUDISH_ENABLED:-1}"
 MODE="${CLAUDISH_MODE:-append}"
-MODEL="${CLAUDISH_MODEL:-llama3.2:3b}"
+MODEL="${CLAUDISH_MODEL:-gemma4:26b-mlx}"
 OLLAMA="${CLAUDISH_OLLAMA:-http://localhost:11434}"
 MIN_CHARS="${CLAUDISH_MIN_CHARS:-200}"
 STUB="${CLAUDISH_STUB:-0}"
@@ -133,6 +135,7 @@ fi
 # ---- obtain the rewrite --------------------------------------------------
 rewrite=""
 curl_rc=0
+err=""
 if [ "$STUB" = "1" ]; then
   nparts="$(ls "$mdir"/*.part 2>/dev/null | wc -l | tr -d ' ')"
   rewrite="STUB-SIMPLIFIED ✦ mode=$MODE chunks=$nparts prose_len=$prose_len ✦ (this text came from the hook, not the model)"
@@ -158,7 +161,8 @@ else
           -H 'Content-Type: application/json' -X POST "$OLLAMA/api/chat" -d @- 2>/dev/null)"
   curl_rc=$?
   rewrite="$(printf '%s' "$resp" | jq -j '.message.content // empty' 2>/dev/null)"
-  dbg "ollama curl_rc=$curl_rc resp_bytes=${#resp} rewrite_bytes=${#rewrite}"
+  err="$(printf '%s' "$resp" | jq -r '.error // empty' 2>/dev/null)"
+  dbg "ollama curl_rc=$curl_rc resp_bytes=${#resp} rewrite_bytes=${#rewrite} err=${err:-none}"
 fi
 
 # Empty/failed rewrite -> fail open (or re-show original in replace mode).
@@ -171,10 +175,19 @@ if [ -z "$rewrite" ]; then
   # The notice only APPENDS one line to the original; it never suppresses
   # content, so the fail-open contract still holds.
   notified="$BUF_ROOT/$sid.notified"
-  if [ "$NOTICE" = "1" ] && [ "$curl_rc" != "0" ] && [ ! -e "$notified" ]; then
+  if [ "$NOTICE" = "1" ] && [ ! -e "$notified" ] && { [ "$curl_rc" != "0" ] || [ -n "${err:-}" ]; }; then
     : > "$notified" 2>/dev/null || true
     last_delta="$(cat "$final_part" 2>/dev/null)"
-    note=$'\n\n────────────────────────\n'"⚠️ claudish-to-english: can't reach ollama at $OLLAMA — showing Claude's original text unchanged. Start it with \`ollama serve\` (see the plugin README). Shown once per session; set CLAUDISH_NOTICE=0 to silence."
+    if [ "$curl_rc" = "28" ]; then
+      why="the rewrite timed out after ${LLM_TIMEOUT}s (model too slow for this message) — raise CLAUDISH_TIMEOUT or set CLAUDISH_MODEL to a smaller model"
+    elif [ "$curl_rc" != "0" ]; then
+      why="can't reach ollama at $OLLAMA — start it with \`ollama serve\` (see the plugin README)"
+    elif printf '%s' "${err:-}" | grep -qi 'not found'; then
+      why="ollama model '$MODEL' isn't available — pull it with \`ollama pull $MODEL\`, or set CLAUDISH_MODEL to a model you have"
+    else
+      why="ollama returned an error: ${err:-unknown}"
+    fi
+    note=$'\n\n────────────────────────\n'"⚠️ claudish-to-english: $why. Showing Claude's original text unchanged. Shown once per session; set CLAUDISH_NOTICE=0 to silence."
     out="$BUF_ROOT/$sid.$mid.notice"
     if [ "$MODE" = "replace" ]; then
       { printf '%s' "$full"; printf '%s' "$note"; } > "$out" 2>/dev/null

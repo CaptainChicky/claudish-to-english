@@ -31,10 +31,20 @@ Warm the model once after `ollama serve` (the first call is a slow cold load):
 ollama run gemma4:26b-mlx "hi"
 ```
 
-**Without ollama running, the plugin does nothing** — Claude's output shows
-normally, unchanged. That is by design, not a bug. The first time it can't reach
-ollama in a session it appends a one-line notice so you know why (once per
-session; set `CLAUDISH_NOTICE=0` to silence it).
+**If the local model isn't ready, the plugin does nothing to your text** —
+Claude's output shows normally, unchanged. That is by design, not a bug. It skips
+(fails open) when ollama is down, the request times out, or the model isn't
+pulled. The first time that happens in a session it tells you why: the display
+hook appends a one-line notice on screen, and the Markdown hook shows a
+`systemMessage`. So a silent skip is never a mystery (once per session; set
+`CLAUDISH_NOTICE=0` to silence it).
+
+**Pick a model you actually have.** The default is `gemma4:26b-mlx`. Pull it (as
+above), or pull a smaller/faster model and point the plugin at it by setting
+`CLAUDISH_MODEL` to that model's exact ollama tag in your `env` (see
+[Configuring the plugin](#configuring-the-plugin)). If `CLAUDISH_MODEL` names a
+model you have not pulled, every rewrite is skipped — with the one-time notice
+above.
 
 ---
 
@@ -160,6 +170,12 @@ In both modes: YAML frontmatter is split off and re-attached **verbatim**, fence
 code is left to the model instruction, short files are skipped, and the write is
 atomic. Fail-open here means the file is left **exactly as the agent wrote it**.
 
+**Large files are slow.** `gemma4:26b-mlx` (the default) rewrites at roughly 60
+tokens/s, so a long plan or spec can take 30–120s. This hook allows up to
+`CLAUDISH_MD_TIMEOUT` (150s) inside a 180s `PostToolUse` hook budget; if a rewrite
+still times out you get the one-time notice above — raise those limits, or set
+`CLAUDISH_MODEL` to a smaller model.
+
 ```jsonc
 // enable for one directory, sibling mode (safe default), via env in the hook command
 CLAUDISH_MD_DIR=/ABS/PATH/docs/plain
@@ -177,16 +193,19 @@ CLAUDISH_MD_DIR=/ABS/PATH/docs/plain
 | `CLAUDISH_OLLAMA` | `http://localhost:11434` | ollama base URL. |
 | `CLAUDISH_MIN_CHARS` | `200` | Skip messages/files whose prose (code stripped) is shorter than this. |
 | `CLAUDISH_STUB` | `0` | `1` = deterministic stub instead of the model (for testing display mechanics). |
-| `CLAUDISH_TIMEOUT` | `45` | LLM client timeout (seconds). Keep it below the hook `timeout`. |
+| `CLAUDISH_TIMEOUT` | `45` | LLM client timeout for the **display** hook (seconds). Keep it below that hook's `timeout` (60s). |
+| `CLAUDISH_MD_TIMEOUT` | `150` | LLM client timeout for the **Markdown file** hook (seconds). Higher on purpose — a large model rewriting a long doc is slow. Keep it below the `PostToolUse` hook `timeout` (180s). |
 | `CLAUDISH_DEBUG` | `0` | `1` = write a debug log to `$TMPDIR/claudish-to-english/`. |
-| `CLAUDISH_NOTICE` | `1` | `1` = append a one-time, once-per-session notice when ollama is unreachable. `0` = stay fully silent (pure fail-open). |
+| `CLAUDISH_NOTICE` | `1` | `1` = show a one-time, once-per-session notice when a rewrite is skipped because ollama is unreachable, the call timed out, or the model isn't pulled (display hook appends it on screen; Markdown hook uses a `systemMessage`). `0` = stay fully silent (pure fail-open). |
 | `CLAUDISH_MD_DIR` | *(unset)* | **Markdown hook opt-in.** Only `*.md` under this directory is rewritten. Unset = the Markdown hook does nothing. |
 | `CLAUDISH_MD_MODE` | `sibling` | `sibling` (`NAME.plain.md`) or `overwrite` (in place). |
 | `CLAUDISH_MD_SUFFIX` | `plain` | Sibling infix: `NAME.<suffix>.md`. |
 
-The hook `timeout` (default 10s for `MessageDisplay`) is raised to 60s in
-`hooks/hooks.json` to survive a cold model load; `CLAUDISH_TIMEOUT` keeps the LLM
-call itself bounded.
+In `hooks/hooks.json` the display hook (`MessageDisplay`) has a 60s `timeout` and
+the Markdown hook (`PostToolUse`) has a 180s `timeout` — the file hook is higher
+because a large model rewriting a long document can take a couple of minutes.
+`CLAUDISH_TIMEOUT` and `CLAUDISH_MD_TIMEOUT` keep the LLM call itself bounded
+below those ceilings, so it fails open cleanly instead of being killed mid-write.
 
 **Quick kill switch:** set `CLAUDISH_ENABLED=0`, or disable the plugin.
 
