@@ -1,7 +1,7 @@
 # claudish-to-english
 
 A Claude Code plugin that shows a **plain-English rewrite** of each assistant
-message, produced by a **local LLM (ollama)**. It is **display-only**: Claude's
+message, produced by a **local LLM via ollama**. It is **display-only**: Claude's
 own reasoning and the saved transcript keep the original text — only what you
 read on screen changes.
 
@@ -21,14 +21,14 @@ This plugin shells out to a **local** model. Nothing works until these are in pl
 | Requirement | Why | Install |
 |---|---|---|
 | **ollama**, running | Does the rewriting, locally | `brew install ollama` then `ollama serve` |
-| A pulled model | The actual rewriter | `ollama pull llama3.2:3b` (~2 GB) |
+| A pulled model | The actual rewriter | `ollama pull gemma4:26b-mlx` (~17 GB; choose the model that fits into yor memory) |
 | `jq` | Parses hook JSON | ships with macOS; else `brew install jq` |
 | `curl` | Talks to ollama | ships with macOS |
 
 Warm the model once after `ollama serve` (the first call is a slow cold load):
 
 ```bash
-ollama run llama3.2:3b "hi"
+ollama run gemma4:26b-mlx "hi"
 ```
 
 **Without ollama running, the plugin does nothing** — Claude's output shows
@@ -130,7 +130,7 @@ CLAUDISH_MD_DIR=/ABS/PATH/docs/plain
 |---|---|---|
 | `CLAUDISH_ENABLED` | `1` | Master switch. `0` = pass everything through. |
 | `CLAUDISH_MODE` | `append` | `append` or `replace` (display hook). |
-| `CLAUDISH_MODEL` | `llama3.2:3b` | ollama model name. |
+| `CLAUDISH_MODEL` | `gemma4:26b-mlx` | ollama model name. |
 | `CLAUDISH_OLLAMA` | `http://localhost:11434` | ollama base URL. |
 | `CLAUDISH_MIN_CHARS` | `200` | Skip messages/files whose prose (code stripped) is shorter than this. |
 | `CLAUDISH_STUB` | `0` | `1` = deterministic stub instead of the model (for testing display mechanics). |
