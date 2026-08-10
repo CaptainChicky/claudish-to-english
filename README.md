@@ -67,6 +67,49 @@ Run `/reload-plugins` after edits; if it doesn't load, check the `/plugin`
 
 ---
 
+## Configuring the plugin
+
+All behavior is controlled by `CLAUDISH_*` environment variables (full list in
+[Configuration](#configuration-env-vars) below). When you install from a
+marketplace, set them in Claude Code's **`env` block in `settings.json`** — do
+**not** edit the plugin's own `hooks/hooks.json`, which lives in the read-only
+plugin cache (`~/.claude/plugins/cache/…`) and is overwritten on every update.
+
+For a personal, all-projects setup, use `~/.claude/settings.json`:
+
+```json
+{
+  "env": {
+    "CLAUDISH_MODEL": "gemma4:26b-mlx",
+    "CLAUDISH_MODE": "append"
+  }
+}
+```
+
+The hooks are subprocesses Claude Code spawns, so they inherit these. A few
+things to know:
+
+- **Restart Claude Code after editing `env`.** The value is captured at launch,
+  so a running session keeps the old one.
+- **`env` does not merge across scopes.** The highest-precedence settings file
+  that defines `env` supplies the *entire* block — it isn't combined with lower
+  scopes. Precedence: managed → local → project → user. Keep all your
+  `CLAUDISH_*` vars in whichever file wins.
+- **Scopes:** `~/.claude/settings.json` (all your projects) ·
+  `.claude/settings.json` (shared with a repo, checked in) ·
+  `.claude/settings.local.json` (just you, just this repo).
+
+Quick one-off without editing a file — hooks inherit the launching shell:
+
+```bash
+CLAUDISH_MODEL=llama3.2:3b claude
+```
+
+To confirm the hook is firing, set `CLAUDISH_DEBUG=1` and watch
+`"$TMPDIR"/claudish-to-english/debug.log`.
+
+---
+
 ## How the display hook works
 
 Claude Code fires the `MessageDisplay` event **once per streamed chunk**, not
