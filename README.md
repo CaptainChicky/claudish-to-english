@@ -50,18 +50,18 @@ above.
 
 ## Install
 
-From the community marketplace:
-
-```shell
-/plugin marketplace add anthropics/claude-plugins-community
-/plugin install claudish-to-english@claude-community
-```
-
-Or directly from this repository (also serves its own marketplace):
+Directly from this repository (also serves its own marketplace):
 
 ```shell
 /plugin marketplace add gvzdv/claudish-to-english
 /plugin install claudish-to-english@gvzdv-plugins
+```
+
+After review by the Anthropic team, the plugin will be available to install from the community marketplace:
+
+```shell
+/plugin marketplace add anthropics/claude-plugins-community
+/plugin install claudish-to-english@claude-community
 ```
 
 If the install summary says `Run /reload-plugins to activate.`, run that command.
