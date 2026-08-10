@@ -32,7 +32,9 @@ ollama run llama3.2:3b "hi"
 ```
 
 **Without ollama running, the plugin does nothing** — Claude's output shows
-normally, unchanged. That is by design, not a bug.
+normally, unchanged. That is by design, not a bug. The first time it can't reach
+ollama in a session it appends a one-line notice so you know why (once per
+session; set `CLAUDISH_NOTICE=0` to silence it).
 
 ---
 
@@ -134,6 +136,7 @@ CLAUDISH_MD_DIR=/ABS/PATH/docs/plain
 | `CLAUDISH_STUB` | `0` | `1` = deterministic stub instead of the model (for testing display mechanics). |
 | `CLAUDISH_TIMEOUT` | `45` | LLM client timeout (seconds). Keep it below the hook `timeout`. |
 | `CLAUDISH_DEBUG` | `0` | `1` = write a debug log to `$TMPDIR/claudish-to-english/`. |
+| `CLAUDISH_NOTICE` | `1` | `1` = append a one-time, once-per-session notice when ollama is unreachable. `0` = stay fully silent (pure fail-open). |
 | `CLAUDISH_MD_DIR` | *(unset)* | **Markdown hook opt-in.** Only `*.md` under this directory is rewritten. Unset = the Markdown hook does nothing. |
 | `CLAUDISH_MD_MODE` | `sibling` | `sibling` (`NAME.plain.md`) or `overwrite` (in place). |
 | `CLAUDISH_MD_SUFFIX` | `plain` | Sibling infix: `NAME.<suffix>.md`. |

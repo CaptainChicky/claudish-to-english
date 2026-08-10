@@ -35,6 +35,8 @@
 #                                           (for display-mechanics testing)
 #   CLAUDISH_TIMEOUT   <seconds>      LLM client timeout (default 45)
 #   CLAUDISH_DEBUG     1|0            write a debug log (default 0)
+#   CLAUDISH_NOTICE    1|0            once-per-session on-screen notice when
+#                                           ollama is unreachable (default 1)
 # ---------------------------------------------------------------------------
 set -uo pipefail
 
@@ -46,6 +48,7 @@ MIN_CHARS="${CLAUDISH_MIN_CHARS:-200}"
 STUB="${CLAUDISH_STUB:-0}"
 LLM_TIMEOUT="${CLAUDISH_TIMEOUT:-45}"
 DEBUG="${CLAUDISH_DEBUG:-0}"
+NOTICE="${CLAUDISH_NOTICE:-1}"
 
 BUF_ROOT="${TMPDIR:-/tmp}/claudish-to-english"
 SEP=$'\n\n────────────────────────\n💬 In plain English:\n\n'
@@ -129,6 +132,7 @@ fi
 
 # ---- obtain the rewrite --------------------------------------------------
 rewrite=""
+curl_rc=0
 if [ "$STUB" = "1" ]; then
   nparts="$(ls "$mdir"/*.part 2>/dev/null | wc -l | tr -d ' ')"
   rewrite="STUB-SIMPLIFIED ✦ mode=$MODE chunks=$nparts prose_len=$prose_len ✦ (this text came from the hook, not the model)"
@@ -152,13 +156,35 @@ else
   [ -n "$req" ] || { dbg "req build failed"; cleanup; [ "$MODE" = "replace" ] && { out="$mdir.orig"; printf '%s' "$full" > "$out" && emit "$out"; }; pass_through; }
   resp="$(printf '%s' "$req" | curl -sS --max-time "$LLM_TIMEOUT" \
           -H 'Content-Type: application/json' -X POST "$OLLAMA/api/chat" -d @- 2>/dev/null)"
+  curl_rc=$?
   rewrite="$(printf '%s' "$resp" | jq -j '.message.content // empty' 2>/dev/null)"
-  dbg "ollama resp_bytes=${#resp} rewrite_bytes=${#rewrite}"
+  dbg "ollama curl_rc=$curl_rc resp_bytes=${#resp} rewrite_bytes=${#rewrite}"
 fi
 
 # Empty/failed rewrite -> fail open (or re-show original in replace mode).
 if [ -z "$rewrite" ]; then
-  dbg "empty rewrite -> fail open"
+  dbg "empty rewrite -> fail open (curl_rc=$curl_rc)"
+
+  # One-time, per-session notice when ollama itself is UNREACHABLE (curl_rc!=0:
+  # connection refused, timeout, DNS). A model error while ollama IS up
+  # (curl_rc=0, empty content) stays silent — a notice would be wrong then.
+  # The notice only APPENDS one line to the original; it never suppresses
+  # content, so the fail-open contract still holds.
+  notified="$BUF_ROOT/$sid.notified"
+  if [ "$NOTICE" = "1" ] && [ "$curl_rc" != "0" ] && [ ! -e "$notified" ]; then
+    : > "$notified" 2>/dev/null || true
+    last_delta="$(cat "$final_part" 2>/dev/null)"
+    note=$'\n\n────────────────────────\n'"⚠️ claudish-to-english: can't reach ollama at $OLLAMA — showing Claude's original text unchanged. Start it with \`ollama serve\` (see the plugin README). Shown once per session; set CLAUDISH_NOTICE=0 to silence."
+    out="$BUF_ROOT/$sid.$mid.notice"
+    if [ "$MODE" = "replace" ]; then
+      { printf '%s' "$full"; printf '%s' "$note"; } > "$out" 2>/dev/null
+    else
+      { printf '%s' "$last_delta"; printf '%s' "$note"; } > "$out" 2>/dev/null
+    fi
+    cleanup
+    emit "$out"
+  fi
+
   cleanup
   if [ "$MODE" = "replace" ]; then
     out="$mdir.orig"; printf '%s' "$full" > "$out" 2>/dev/null && emit "$out"
