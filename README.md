@@ -1,5 +1,12 @@
 # claudish-to-english
 
+<p align="center">
+  <img
+    src="https://github.com/gvzdv/claudish-to-english/releases/download/assets/comparison.png"
+    width="820"
+    alt="Side-by-side comparison: a dense, jargon-heavy Claude message labeled 'Claudish' on the left, and its plain-English rewrite on the right">
+</p>
+
 A Claude Code plugin that shows a **plain-English rewrite** of each assistant
 message, produced by a **local LLM via ollama**. It is **display-only**: Claude's
 own reasoning and the saved transcript keep the original text — only what you
