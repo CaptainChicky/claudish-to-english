@@ -26,6 +26,9 @@
 #
 # Config (env, with safe defaults):
 #   CLAUDISH_ENABLED   1|0            master switch shared with the display hook (default 1)
+#   CLAUDISH_OFF_FILE  <path>         flag file checked per message; when it exists,
+#                                     rewrites pause (default ~/.claude/claudish-off).
+#                                     Lets a hotkey/script toggle mid-session.
 #   CLAUDISH_MD_DIR    <path>         REQUIRED opt-in. Only .md under here is rewritten.
 #                                     Relative paths resolve against the tool's cwd.
 #   CLAUDISH_MD_MODE   sibling|overwrite   (default sibling)
@@ -46,6 +49,10 @@
 set -uo pipefail
 
 ENABLED="${CLAUDISH_ENABLED:-1}"
+# Runtime kill switch: env is frozen at session launch, so a hotkey or script
+# can't flip CLAUDISH_ENABLED mid-session. A flag file can be checked fresh on
+# every invocation. Create it to pause rewrites instantly; remove it to resume.
+[ -f "${CLAUDISH_OFF_FILE:-$HOME/.claude/claudish-off}" ] && ENABLED=0
 MD_DIR="${CLAUDISH_MD_DIR:-}"
 MD_MODE="${CLAUDISH_MD_MODE:-sibling}"
 MD_SUFFIX="${CLAUDISH_MD_SUFFIX:-plain}"
