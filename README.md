@@ -8,22 +8,27 @@
 </p>
 
 A Claude Code plugin that shows a **plain-English rewrite** of each assistant
-message, produced by a **local LLM via ollama**. It is **display-only**: Claude's
-own reasoning and the saved transcript keep the original text — only what you
-read on screen changes.
+message, produced by a **local LLM via ollama** (default), the **Anthropic
+API**, or any **OpenAI-compatible API**. It is **display-only**:
+Claude's own reasoning and the saved transcript keep the original text — only
+what you read on screen changes.
 
 An optional second hook rewrites **Markdown files** into plain English when they
 are written or edited (opt-in, off by default).
 
 > Status: working prototype. Every hook fails **open** — if anything goes wrong
-> (ollama down, timeout, missing dependency), you simply see Claude's original
-> text. The plugin can never swallow or corrupt an answer.
+> (provider down, timeout, missing key or dependency), you simply see Claude's
+> original text. The plugin can never swallow or corrupt an answer.
+
 
 ---
 
 ## Requirements (read this first)
 
-This plugin shells out to a **local** model. Nothing works until these are in place:
+With the default `ollama` provider this plugin shells out to a **local** model,
+and nothing works until these are in place. (With `CLAUDISH_PROVIDER=anthropic`
+or `openai` you need only `jq`, `curl`, and an API key — see
+[Providers](#providers).)
 
 <a id="macos-setup"></a>
 <details>
@@ -267,6 +272,81 @@ frontmatter, so the frontmatter stays on line 1 where parsers expect it.
 
 ---
 
+## Providers
+
+Rewrites go through one of three providers, selected with `CLAUDISH_PROVIDER`
+(both hooks share the setting). The default is unchanged from upstream: local
+ollama, nothing leaves your machine.
+
+| Provider | Endpoint | Key | Default model |
+|---|---|---|---|
+| `ollama` (default) | `CLAUDISH_OLLAMA` (`http://localhost:11434`) | none | `gemma4:26b-mlx` |
+| `anthropic` | `CLAUDISH_ANTHROPIC_URL` (`https://api.anthropic.com`) + `/v1/messages` | `CLAUDISH_ANTHROPIC_KEY` or `ANTHROPIC_API_KEY` | `claude-haiku-4-5` |
+| `openai` | `CLAUDISH_OPENAI_URL` + `/chat/completions` | `CLAUDISH_OPENAI_KEY` or `OPENAI_API_KEY` | `gpt-5.6-luna` |
+
+> [!CAUTION]
+> The cloud providers pick their key up from the **ambient environment**
+> (`OPENAI_API_KEY` / `ANTHROPIC_API_KEY`), and `CLAUDISH_OPENAI_URL` defaults
+> to api.openai.com. Anything that puts those variables into the environment
+> Claude Code launches with — an `export` in your shell profile, a tool like
+> direnv loading a project's `.env` into your shell, or the `env` block of a
+> settings file — makes them visible to this plugin. In such an environment,
+> setting the single variable `CLAUDISH_PROVIDER=openai` starts sending every
+> assistant message (and, with the Markdown hook, file contents) to OpenAI's
+> cloud. Likewise, `CLAUDISH_PROVIDER=anthropic` will quietly spend the same
+> `ANTHROPIC_API_KEY` (and share its rate limits) that other tools on your
+> machine may rely on. Selecting a cloud provider IS the consent switch — set
+> it only when you mean it, and use the `CLAUDISH_*_KEY` variables when you
+> want the plugin on a dedicated key.
+
+```bash
+# ollama (default) — local, nothing leaves your machine
+export CLAUDISH_PROVIDER=ollama
+export CLAUDISH_MODEL=gemma4:26b-mlx        # the default; any pulled tag works
+
+# Anthropic — Claude Haiku
+export CLAUDISH_PROVIDER=anthropic
+export ANTHROPIC_API_KEY=sk-ant-...
+export CLAUDISH_MODEL=claude-haiku-4-5      # the default; override to taste
+
+# OpenAI — GPT-5.6 Luna
+export CLAUDISH_PROVIDER=openai
+export OPENAI_API_KEY=sk-...
+export CLAUDISH_MODEL=gpt-5.6-luna          # the default; override to taste
+
+# Any OpenAI-compatible server (LM Studio, llama.cpp server, vLLM, OpenRouter).
+# A key is only required for api.openai.com — local servers work keyless.
+export CLAUDISH_PROVIDER=openai
+export CLAUDISH_OPENAI_URL=http://localhost:1234/v1
+export CLAUDISH_MODEL=qwen3-30b
+```
+
+Notes:
+
+- `CLAUDISH_MODEL` overrides any provider's default model.
+- Requests to api.openai.com send `reasoning_effort: "none"` (GPT-5.6-class
+  models otherwise spend reasoning tokens on a plain rewrite). Custom
+  OpenAI-compatible URLs get no such field, since some local servers reject
+  unknown fields. Force one with `CLAUDISH_OPENAI_EFFORT`, or set it
+  **explicitly empty** (`CLAUDISH_OPENAI_EFFORT=`) to omit the field even for
+  api.openai.com — needed for models that reject `reasoning_effort` entirely.
+- The anthropic provider caps completions at `CLAUDISH_MAX_TOKENS` (default
+  4096, since the Messages API requires an explicit cap).
+- A rewrite that hits an output-token cap is **discarded**, not shown — on all
+  three providers (ollama's `done_reason: "length"` included): a half-finished
+  rewrite on screen is confusing, and in the Markdown hook's `overwrite` mode
+  it would replace your real document. You get the original text plus the
+  once-per-session notice suggesting a higher cap.
+- Every provider failure stays fail-open: missing key, bad key, unreachable
+  endpoint, or timeout just leaves the original text (plus the once-per-session
+  notice, unless `CLAUDISH_NOTICE=0`).
+
+> **Privacy:** the cloud providers send each assistant message (and, for the
+> Markdown hook, file contents) to an external API. Read
+> [Privacy / egress](#privacy--egress) before switching away from ollama.
+
+---
+
 ## Configuration (env vars)
 
 | Var | Default | Meaning |
@@ -274,14 +354,21 @@ frontmatter, so the frontmatter stays on line 1 where parsers expect it.
 | `CLAUDISH_ENABLED` | `1` | Master switch. `0` = pass everything through. Read once at session start. |
 | `CLAUDISH_OFF_FILE` | `~/.claude/claudish-off` | Runtime kill switch. While this file exists, rewrites pause — re-checked every message, so unlike env vars it works mid-session. See [Toggling mid-session](#toggling-mid-session). |
 | `CLAUDISH_MODE` | `append` | `append` or `replace` (display hook). |
-| `CLAUDISH_MODEL` | `gemma4:26b-mlx` | ollama model name (MLX = Apple-silicon only; Windows users must override). |
+| `CLAUDISH_PROVIDER` | `ollama` | `ollama`, `anthropic`, or `openai` — which LLM serves rewrites (both hooks). |
+| `CLAUDISH_MODEL` | *(per provider)* | Model name; overrides the provider default (see [Providers](#providers)). The ollama default `gemma4:26b-mlx` is MLX (Apple-silicon only; Windows users must override). |
 | `CLAUDISH_OLLAMA` | `http://localhost:11434` | ollama base URL. |
+| `CLAUDISH_ANTHROPIC_KEY` | *(unset)* | Anthropic API key; falls back to `ANTHROPIC_API_KEY`. |
+| `CLAUDISH_OPENAI_KEY` | *(unset)* | OpenAI(-compatible) API key; falls back to `OPENAI_API_KEY`. Only required for api.openai.com. |
+| `CLAUDISH_OPENAI_URL` | `https://api.openai.com/v1` | Base URL for any OpenAI-compatible endpoint (LM Studio, llama.cpp server, vLLM, OpenRouter, ...). Trailing slashes are ignored. |
+| `CLAUDISH_ANTHROPIC_URL` | `https://api.anthropic.com` | Base URL for the anthropic provider — override for proxies/gateways that speak the Messages API. |
+| `CLAUDISH_OPENAI_EFFORT` | `none` on api.openai.com, else *(unset)* | `reasoning_effort` sent with openai-provider requests. Set explicitly empty to omit the field. |
+| `CLAUDISH_MAX_TOKENS` | `4096` | Completion cap for the anthropic provider. Rewrites that hit the cap are discarded (fail-open), with a notice to raise it. |
 | `CLAUDISH_MIN_CHARS` | `200` | Skip messages/files whose prose (code stripped) is shorter than this. |
 | `CLAUDISH_STUB` | `0` | `1` = deterministic stub instead of the model (for testing display mechanics). |
 | `CLAUDISH_TIMEOUT` | `45` | LLM client timeout for the **display** hook (seconds). Keep it below that hook's `timeout` (60s). |
 | `CLAUDISH_MD_TIMEOUT` | `150` | LLM client timeout for the **Markdown file** hook (seconds). Higher on purpose — a large model rewriting a long doc is slow. Keep it below the `PostToolUse` hook `timeout` (180s). |
 | `CLAUDISH_DEBUG` | `0` | `1` = write a debug log to `$TMPDIR/claudish-to-english/`. |
-| `CLAUDISH_NOTICE` | `1` | `1` = show a one-time, once-per-session notice when a rewrite is skipped because ollama is unreachable, the call timed out, or the model isn't pulled (display hook appends it on screen; Markdown hook uses a `systemMessage`). `0` = stay fully silent (pure fail-open). |
+| `CLAUDISH_NOTICE` | `1` | `1` = show a one-time, once-per-session notice when a rewrite is skipped because the provider is unreachable, the call timed out, a key is missing, or the model isn't available (display hook appends it on screen; Markdown hook uses a `systemMessage`). `0` = stay fully silent (pure fail-open). |
 | `CLAUDISH_MD_DIR` | *(unset)* | **Markdown hook opt-in.** Only `*.md` under this directory is rewritten. Unset = the Markdown hook does nothing. |
 | `CLAUDISH_MD_MODE` | `sibling` | `sibling` (`NAME.plain.md`) or `overwrite` (in place). |
 | `CLAUDISH_MD_SUFFIX` | `plain` | Sibling infix: `NAME.<suffix>.md`. |
@@ -317,19 +404,22 @@ sessions at once. Override the path with `CLAUDISH_OFF_FILE`.
 
 ### Reasoning models
 
-The request sends `"think": false`. Models with a hidden reasoning phase
-otherwise spend most of their time generating reasoning tokens you never see —
-much slower for identical output quality on this simple task. Keep it off.
+The ollama request sends `"think": false`, and openai-provider requests to
+api.openai.com send `reasoning_effort: "none"`. Models with a hidden reasoning
+phase otherwise spend most of their time generating reasoning tokens you never
+see — much slower for identical output quality on this simple task. Keep it off.
 
 ---
 
 ## Privacy / egress
 
-The rewriter runs **entirely locally** against ollama, so **no conversation
-content leaves your machine**. If you ever point `CLAUDISH_OLLAMA` at a
-remote/hosted endpoint, that context (which can include file contents from tool
-results) would be sent off-box — don't do that unless you understand and accept
-it.
+With the default provider the rewriter runs **entirely locally** against
+ollama, so **no conversation content leaves your machine**. Setting
+`CLAUDISH_PROVIDER` to `anthropic` or `openai` changes that deliberately: every
+rewritten assistant message (and, with the Markdown hook enabled, file
+contents) is sent to that API. The same applies to pointing `CLAUDISH_OLLAMA`
+or `CLAUDISH_OPENAI_URL` at a remote/hosted endpoint. Don't switch away from
+local unless you understand and accept it.
 
 ---
 
@@ -344,6 +434,7 @@ claudish-to-english/
 │   └── hooks.json          # MessageDisplay -> rewrite.sh ; PostToolUse -> rewrite-md.sh
 ├── rewrite.sh              # display-rewrite hook
 ├── rewrite-md.sh           # markdown-file rewrite hook (opt-in)
+├── providers.sh            # provider layer (ollama/anthropic/openai), sourced by both hooks
 ├── LICENSE
 └── README.md
 ```
