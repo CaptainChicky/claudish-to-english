@@ -5,6 +5,25 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1] - 2026-08-20
+
+### Fixed
+- The `/claudish` command now hands the user's argument string to
+  `claudish-ctl.sh` through a **quoted here-doc on stdin** instead of
+  interpolating it into the command line, and the script splits it back into
+  words itself (globbing disabled). Claude Code substitutes `$ARGUMENTS`
+  textually *before* the shell parses the command, so the earlier `"$ARGUMENTS"`
+  quoting could not neutralize it — command substitution (`$(…)`, backticks) and
+  `$VAR` expansion stayed live inside the quotes, an embedded quote could break
+  out, and input like `/claudish language $HOME` was silently mangled. A quoted
+  here-doc delimiter makes the shell copy the argument verbatim, so nothing
+  typed after `/claudish` is re-parsed as shell syntax: `$`, `$(…)`, backticks,
+  quotes, operators (`;`/`|`/`&&`) and `*` all reach the script as literal text.
+  Multi-word names like `language Brazilian Portuguese`, direct terminal
+  invocation, and bare `/claudish` all behave exactly as before.
+  Reported by [@MakhBeth](https://github.com/MakhBeth) in
+  [PR #17](https://github.com/gvzdv/claudish-to-english/pull/17).
+
 ## [0.5.0] - 2026-08-19
 
 ### Added
@@ -115,6 +134,8 @@ by Davide Di Pumpo, adapted to the provider layer and language resolver.
 - Optional `PostToolUse` Markdown-file rewrite hook (`rewrite-md.sh`), opt-in by
   directory (`CLAUDISH_MD_DIR`), with `sibling` and `overwrite` modes.
 
+[0.5.1]: https://github.com/gvzdv/claudish-to-english/compare/v0.5.0...v0.5.1
+[0.5.0]: https://github.com/gvzdv/claudish-to-english/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/gvzdv/claudish-to-english/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/gvzdv/claudish-to-english/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/gvzdv/claudish-to-english/compare/v0.1.1...v0.2.0
