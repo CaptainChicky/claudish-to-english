@@ -653,6 +653,16 @@ claudish-to-english/
 └── README.md
 ```
 
+## Contributing
+
+Bug reports and PRs welcome. See **[CONTRIBUTING.md](CONTRIBUTING.md)** for how
+to set up a working copy, how to test a change without a provider
+(`CLAUDISH_STUB=1`), the one rule that outranks everything (every hook must
+**fail open**), and the traps that have bitten before — a new style preset
+touches four files, and on-screen text must never use ANSI colour codes.
+
+Add your changelog entry under `## [Unreleased]`; the maintainer cuts releases.
+
 ## License
 
 MIT — see [LICENSE](./LICENSE).

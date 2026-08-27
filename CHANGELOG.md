@@ -5,6 +5,19 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Contributor and release documentation.** `CONTRIBUTING.md` covers setup,
+  testing a change without a provider (`CLAUDISH_STUB=1`), the rule that
+  outranks everything else (every hook must fail open), and the traps that have
+  caused real regressions here. A pull-request template puts the same checklist
+  in front of every PR, `CLAUDE.md` gives Claude Code the same ground rules
+  automatically, and a `/release` skill executes a release cut in two phases so
+  the version bump, the changelog link refs, and tagging the merge commit stop
+  being things anyone has to remember. `.claude/settings.local.json` is now
+  gitignored; `.claude/skills/` is tracked.
+
 ## [0.8.0] - 2026-08-27
 
 ### Added
