@@ -227,6 +227,10 @@ by Davide Di Pumpo, adapted to the provider layer and language resolver.
 - Optional `PostToolUse` Markdown-file rewrite hook (`rewrite-md.sh`), opt-in by
   directory (`CLAUDISH_MD_DIR`), with `sibling` and `overwrite` modes.
 
+[Unreleased]: https://github.com/gvzdv/claudish-to-english/compare/v0.7.1...HEAD
+[0.7.1]: https://github.com/gvzdv/claudish-to-english/compare/v0.7.0...v0.7.1
+[0.7.0]: https://github.com/gvzdv/claudish-to-english/compare/v0.6.0...v0.7.0
+[0.6.0]: https://github.com/gvzdv/claudish-to-english/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/gvzdv/claudish-to-english/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/gvzdv/claudish-to-english/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/gvzdv/claudish-to-english/compare/v0.3.0...v0.4.0
