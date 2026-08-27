@@ -5,6 +5,20 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.1] - 2026-08-27
+
+### Fixed
+- `/claudish` no longer fails with `Shell command permission check failed`.
+  The command's `allowed-tools` rule closed its quote in the wrong place —
+  `Bash("${CLAUDE_PLUGIN_ROOT}"/claudish-ctl.sh:*)` — while the injected
+  command quotes the whole path
+  (`"${CLAUDE_PLUGIN_ROOT}/claudish-ctl.sh" --stdin-args …`), so the rule's
+  prefix never matched the command and the call was refused. Bash injected
+  from a slash command is allow-or-fail with no permission prompt to fall back
+  on, which turned the mismatch into a hard error on every invocation. The
+  misplaced quote arrived with the command itself in 0.5.0, so `/claudish` has
+  been unusable in every release since.
+
 ## [0.7.0] - 2026-08-26
 
 ### Added
