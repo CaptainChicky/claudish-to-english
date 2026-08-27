@@ -17,11 +17,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   wins over it, and the output language still applies.
 
 ### Changed
-- The **separator label is now coloured for every style**, not just the default
-  one. Each label reads yellow, then green, then red for the part carrying the
-  language and the colon: `In plain <language>:`, `Ugh. Me say:`, `Like you're
-  five:`, and `TL;DR:` (yellow alone, splitting into `TL;DR` / `in` /
-  `<language>:` when a language is set).
+- **Every style now labels its block with its own emoji and marks the word that
+  carries the style in bold**: 💬 In plain **language**:, 📌 **TL;DR**:,
+  👶 Like you're **five**:, 🦴 **Ugh.** Me say:. The emphasis is markdown,
+  rendered by Claude Code itself, deliberately **not** ANSI colour codes: the
+  16-colour codes are palette indices a terminal theme is free to remap onto a
+  grey or onto the background (Solarized maps four of the bright slots to
+  monotones), and raw escapes would also leak as literal bytes into `claude -p`
+  output piped to a file. Bold is an attribute rather than a palette lookup, so
+  it survives every theme and degrades to readable text off-terminal.
+
+### Fixed
+- The **session-start override notice now reports `style=caveman`**. It
+  allowlisted only `tldr` and `5y`, so a `caveman` set by `/claudish style`
+  persisted across sessions with nothing on screen to say so — the one warning
+  that exists for flag files that outlive their session.
+- **A `language` setting can no longer smuggle a terminal escape sequence onto
+  the screen.** `lang.sh` collapsed whitespace but ESC is not whitespace, so a
+  `language` of `$'\033[2J'` in a project's `.claude/settings.json` — a file
+  that travels with the repository and is not necessarily the local user's own
+  text — reached the label verbatim. Control characters are now folded to
+  spaces, by codepoint, before the existing three-word / 30-codepoint caps.
+
 ## [0.7.1] - 2026-08-27
 
 ### Fixed

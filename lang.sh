@@ -21,22 +21,35 @@
 # session already answering in one language gets its rewrite in that language,
 # with nothing extra to configure.
 #
-# The value is normalized to at most three words and 30 codepoints, because it
-# lands in a system prompt and in an on-screen label — and a project's
-# .claude/settings.json travels with the repository, so it is not necessarily
-# the local user's own text. A language name fits ("Esperanto", "简体中文",
-# "Brazilian Portuguese"); a paragraph of smuggled instructions does not.
+# The value is normalized to at most three words and 30 codepoints, with control
+# characters folded to spaces, because it lands in a system prompt and in an
+# on-screen label — and a project's .claude/settings.json travels with the
+# repository, so it is not necessarily the local user's own text. A language
+# name fits ("Esperanto", "简体中文", "Brazilian Portuguese"); a paragraph of
+# smuggled instructions does not, and neither does a terminal escape sequence.
 # Every failure — no jq, unreadable or malformed JSON, missing or non-string
 # key — comes back as an empty string, never an error: an unusable setting must
 # leave rewrites working, in English.
 # ---------------------------------------------------------------------------
 
-# Collapse whitespace, trim, keep at most 3 words / 30 codepoints (jq slices by
-# codepoint, so multibyte names survive). Empty in -> empty out.
+# Fold control characters to spaces, collapse whitespace, trim, keep at most 3
+# words / 30 codepoints (jq slices by codepoint, so multibyte names survive).
+# Empty in -> empty out.
+#
+# The control-character fold matters because this value is printed straight into
+# the on-screen label, and ESC is not whitespace: without it a `language` of
+# $'\033[2J' would reach the terminal as a real escape sequence. Folding to a
+# space rather than deleting keeps "Brazilian\nPortuguese" two words, and turns
+# an escape into harmless literal text that the word/length caps then trim.
+# Filtering by codepoint (not a regex) avoids depending on how the regex engine
+# spells a control-character class.
 _claudish_lang_clean() {
   [ -n "$1" ] || return 0
   jq -jn --arg v "$1" \
-    '$v | gsub("\\s+"; " ") | ltrimstr(" ") | rtrimstr(" ")
+    '$v | explode
+        | map(if . < 32 or . == 127 or (. >= 128 and . <= 159) then 32 else . end)
+        | implode
+        | gsub("\\s+"; " ") | ltrimstr(" ") | rtrimstr(" ")
         | [splits(" ")][0:3] | join(" ") | .[0:30]' 2>/dev/null
   return 0
 }

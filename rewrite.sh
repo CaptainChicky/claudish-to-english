@@ -251,22 +251,19 @@ fi
 # here needs it. Empty -> the rewrite follows the language of the message, so
 # the label must not claim one either.
 OUT_LANG="$(claudish_language "$cwd")"
-# The label names the style and, when set, the language. Every label is
-# coloured the same way: yellow, then green, then red for the part that carries
-# the language and the colon.
+# The label names the style and, when set, the language, and marks the word
+# that carries the style in **bold**. displayContent is rendered as markdown,
+# so the emphasis is the renderer's own — no ANSI escapes: those would be at
+# the mercy of the terminal's palette (a theme is free to map any colour slot
+# onto a grey, or onto the background), and they would leak as raw bytes into
+# `claude -p` output piped to a file. Bold is an attribute, not a palette
+# lookup, so it survives every theme and degrades to readable `**word**` text
+# when the output is not a terminal at all.
 case "$STYLE" in
-  tldr)
-    # "TL;DR:" is yellow on its own; with a language the label splits like the
-    # others — "TL;DR" yellow, "in" green, "<language>:" red.
-    if [ -n "$OUT_LANG" ]; then
-      SEP=$'\n\n────────────────────────\n💬 \033[1;93mTL;DR\033[0m \033[32min\033[0m \033[1;91m'"$OUT_LANG"$':\033[0m\n\n'
-    else
-      SEP=$'\n\n────────────────────────\n💬 \033[1;93mTL;DR:\033[0m\n\n'
-    fi
-    ;;
-  5y)      SEP=$'\n\n────────────────────────\n💬 \033[1;93mLike\033[0m \033[32myou\'re\033[0m \033[1;91mfive'"${OUT_LANG:+, in $OUT_LANG}"$':\033[0m\n\n' ;;
-  caveman) SEP=$'\n\n────────────────────────\n💬 \033[1;93mUgh.\033[0m \033[32mMe\033[0m \033[1;91msay'"${OUT_LANG:+ in $OUT_LANG}"$':\033[0m\n\n' ;;
-  *)       SEP=$'\n\n────────────────────────\n💬 \033[1;93mIn\033[0m \033[32mplain\033[0m \033[1;91m'"${OUT_LANG:-language}"$':\033[0m\n\n' ;;
+  tldr)    SEP=$'\n\n────────────────────────\n📌 **TL;DR**'"${OUT_LANG:+ in $OUT_LANG}"$':\n\n' ;;
+  5y)      SEP=$'\n\n────────────────────────\n👶 Like you\'re **five**'"${OUT_LANG:+, in $OUT_LANG}"$':\n\n' ;;
+  caveman) SEP=$'\n\n────────────────────────\n🦴 **Ugh.** Me say'"${OUT_LANG:+ in $OUT_LANG}"$':\n\n' ;;
+  *)       SEP=$'\n\n────────────────────────\n💬 In plain **'"${OUT_LANG:-language}"$'**:\n\n' ;;
 esac
 dbg "language=${OUT_LANG:-same as the message (default)} style=${STYLE:-default}"
 

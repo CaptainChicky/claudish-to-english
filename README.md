@@ -288,7 +288,7 @@ speaks Esperanto needs no extra configuration:
 | `~/.claude/settings.json` | `"language": "Esperanto"` |
 
 The first one that is set wins, and the on-screen label then names it:
-`💬 In plain Esperanto:`. `CLAUDISH_LANG` set but **empty** ignores the settings
+💬 In plain **Esperanto**:. `CLAUDISH_LANG` set but **empty** ignores the settings
 key and goes back to following the input's language; set it to `English` to
 force English on a non-English session.
 
@@ -316,7 +316,19 @@ For a quick change of tone without writing a prompt, the display hook also has
 three **built-in style presets** — `tldr` (a short summary), `5y` (explain like
 I'm five), and `caveman` (blunt caveman speak) — set with
 [`/claudish style`](#controlling-it-live-claudish) or
-`CLAUDISH_STYLE`. For full control, you can instead **replace** either prompt
+`CLAUDISH_STYLE`. Each one labels its block with its own emoji, so the style in
+use is visible at a glance:
+
+| style | label |
+|---|---|
+| *(default)* | 💬 In plain **language**: |
+| `tldr` | 📌 **TL;DR**: |
+| `5y` | 👶 Like you're **five**: |
+| `caveman` | 🦴 **Ugh.** Me say: |
+
+The bold word is markdown, rendered by Claude Code itself — no ANSI colour
+codes, so the label cannot be washed out by a terminal colour scheme and stays
+readable when `claude -p` output is piped to a file. For full control, you can instead **replace** either prompt
 with your own to add specific rules or use wording that works better with your
 model (this wins over a style preset). To do so, point the hook at a file that
 holds the prompt:
@@ -375,7 +387,7 @@ rewrites the assistant's message.
 
 | `CLAUDISH_MODE` | On screen | Notes |
 |---|---|---|
-| `append` (default) | Original streams normally, then a `💬 In plain language:` block is appended (`💬 In plain Esperanto:` when a language is configured). | Safest. No streaming loss; if the LLM fails you just don't get the extra block. |
+| `append` (default) | Original streams normally, then a 💬 In plain **language**: block is appended (💬 In plain **Esperanto**: when a language is configured; other styles use their own emoji — see [Customizing the rewrite prompt](#customizing-the-rewrite-prompt)). | Safest. No streaming loss; if the LLM fails you just don't get the extra block. |
 | `replace` | Only the simplified version (original chunks suppressed while streaming). | Experimental. Appears all at once after LLM latency; on failure it re-shows the full original. |
 
 ---

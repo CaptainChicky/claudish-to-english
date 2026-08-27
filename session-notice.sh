@@ -44,7 +44,7 @@ fi
 
 if [ -f "$STYLE_FILE" ]; then
   case "$(cat "$STYLE_FILE" 2>/dev/null | tr -d '[:space:]')" in
-    tldr|5y) add "style=$(cat "$STYLE_FILE" 2>/dev/null | tr -d '[:space:]')" ;;
+    tldr|5y|caveman) add "style=$(cat "$STYLE_FILE" 2>/dev/null | tr -d '[:space:]')" ;;
   esac
 fi
 
