@@ -1,2 +1,6 @@
 .DS_Store
 *.plain.md
+
+# personal, per-machine Claude Code settings (the shared ones live in
+# .claude/skills/ and CLAUDE.md, which ARE tracked)
+.claude/settings.local.json
