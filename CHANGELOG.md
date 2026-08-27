@@ -38,6 +38,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   that travels with the repository and is not necessarily the local user's own
   text — reached the label verbatim. Control characters are now folded to
   spaces, by codepoint, before the existing three-word / 30-codepoint caps.
+  The session-start notice printed the language flag file through a `\r\n`-only
+  filter, so it had the same hole on its own surface; it now routes the value
+  through `lang.sh`, which also makes the two agree on the word cap.
 
 ## [0.7.1] - 2026-08-27
 

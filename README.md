@@ -287,10 +287,12 @@ speaks Esperanto needs no extra configuration:
 | `<project>/.claude/settings.json` | `"language": "Esperanto"` |
 | `~/.claude/settings.json` | `"language": "Esperanto"` |
 
-The first one that is set wins, and the on-screen label then names it:
-💬 In plain **Esperanto**:. `CLAUDISH_LANG` set but **empty** ignores the settings
-key and goes back to following the input's language; set it to `English` to
-force English on a non-English session.
+The first one that is set wins, and the on-screen label then names it —
+💬 In plain **Esperanto**:
+
+`CLAUDISH_LANG` set but **empty** ignores the settings key and goes back to
+following the input's language; set it to `English` to force English on a
+non-English session.
 
 A configured language is appended to the built-in prompt. A prompt supplied
 through `CLAUDISH_PROMPT_FILE` or `CLAUDISH_MD_PROMPT_FILE` replaces the whole
