@@ -31,10 +31,11 @@
 #                                          ~/.claude/claudish-off) — lets a
 #                                          hotkey/script toggle mid-session
 #   CLAUDISH_MODE      append|replace display strategy (default append)
-#   CLAUDISH_STYLE     tldr|5y        rewrite-style preset replacing the base
+#   CLAUDISH_STYLE     tldr|5y|caveman  rewrite-style preset replacing the base
 #                                          prompt: "tldr" = a clearly shorter
 #                                          summary; "5y" = explain like I'm
-#                                          five. Unset/other = the default
+#                                          five; "caveman" = blunt caveman
+#                                          speak. Unset/other = the default
 #                                          plain-language rewrite. A usable
 #                                          CLAUDISH_PROMPT_FILE wins over any
 #                                          style (custom prompt > style >
@@ -93,15 +94,17 @@ if [ -f "$_mode_file" ]; then
   esac
 fi
 # Rewrite-style preset (display hook only): "tldr" = a clearly shorter summary,
-# "5y" = explain like I'm five. Unset/other = the default plain-language rewrite.
+# "5y" = explain like I'm five, "caveman" = blunt caveman speak. Unset/other =
+# the default plain-language rewrite.
 # Like MODE, the env is the launch default and a flag file overrides it live.
 STYLE=""
-case "${CLAUDISH_STYLE:-}" in tldr|5y) STYLE="$CLAUDISH_STYLE" ;; esac
+case "${CLAUDISH_STYLE:-}" in tldr|5y|caveman) STYLE="$CLAUDISH_STYLE" ;; esac
 _style_file="${CLAUDISH_STYLE_FILE:-$HOME/.claude/claudish-style}"
 if [ -f "$_style_file" ]; then
   case "$(cat "$_style_file" 2>/dev/null | tr -d '[:space:]')" in
-    tldr) STYLE=tldr ;;
-    5y)   STYLE=5y ;;
+    tldr)    STYLE=tldr ;;
+    5y)      STYLE=5y ;;
+    caveman) STYLE=caveman ;;
   esac
 fi
 MIN_CHARS="${CLAUDISH_MIN_CHARS:-200}"
@@ -248,11 +251,19 @@ fi
 # here needs it. Empty -> the rewrite follows the language of the message, so
 # the label must not claim one either.
 OUT_LANG="$(claudish_language "$cwd")"
-# The label names the style and, when set, the language.
+# The label names the style and, when set, the language, and marks the word
+# that carries the style in **bold**. displayContent is rendered as markdown,
+# so the emphasis is the renderer's own — no ANSI escapes: those would be at
+# the mercy of the terminal's palette (a theme is free to map any colour slot
+# onto a grey, or onto the background), and they would leak as raw bytes into
+# `claude -p` output piped to a file. Bold is an attribute, not a palette
+# lookup, so it survives every theme and degrades to readable `**word**` text
+# when the output is not a terminal at all.
 case "$STYLE" in
-  tldr) SEP=$'\n\n────────────────────────\n'"💬 TL;DR${OUT_LANG:+ in $OUT_LANG}:"$'\n\n' ;;
-  5y)   SEP=$'\n\n────────────────────────\n'"💬 Like you're five${OUT_LANG:+, in $OUT_LANG}:"$'\n\n' ;;
-  *)    SEP=$'\n\n────────────────────────\n💬 In plain '"${OUT_LANG:-language}"$':\n\n' ;;
+  tldr)    SEP=$'\n\n────────────────────────\n📌 **TL;DR**'"${OUT_LANG:+ in $OUT_LANG}"$':\n\n' ;;
+  5y)      SEP=$'\n\n────────────────────────\n👶 Like you\'re **five**'"${OUT_LANG:+, in $OUT_LANG}"$':\n\n' ;;
+  caveman) SEP=$'\n\n────────────────────────\n🦴 **Ugh.** Me say'"${OUT_LANG:+ in $OUT_LANG}"$':\n\n' ;;
+  *)       SEP=$'\n\n────────────────────────\n💬 In plain **'"${OUT_LANG:-language}"$'**:\n\n' ;;
 esac
 dbg "language=${OUT_LANG:-same as the message (default)} style=${STYLE:-default}"
 
@@ -275,6 +286,7 @@ else
   case "$STYLE" in
     tldr) sys="You rewrite the assistant's message as a SHORT summary in simple, plain language. This is a simplification, NOT a translation: it must be clearly shorter than the original — aim for half its length or less. Keep the key facts, decisions, numbers, and file paths; drop repetitions, hedges, and secondary detail. Keep technical terms, commands, and identifiers in their original form. Omit fenced code blocks (the original text is always in the transcript). Write the rewrite in the same language as the message you are rewriting. Output ONLY the rewritten message with no preamble, labels, or commentary." ;;
     5y)   sys="You rewrite the assistant's message as if explaining it to a five-year-old: very simple words, short sentences, a friendly tone, and simple comparisons for hard ideas. Keep every important fact, name, number, and file path accurate. Keep technical terms, commands, and identifiers in their original form. Leave fenced code blocks unchanged. Write the rewrite in the same language as the message you are rewriting. Output ONLY the rewritten message with no preamble, labels, or commentary." ;;
+    caveman) sys="You rewrite the assistant's message as blunt caveman speak: very short sentences, simple forceful words, no articles, present tense. Grunt where a sentence would only hedge. Keep every important fact, name, number, and file path accurate — caveman is dumb about grammar, never about facts. Keep technical terms, commands, identifiers, and file paths exactly as written; do not cave-speak them. Leave fenced code blocks unchanged. Write the rewrite in the same language as the message you are rewriting. Output ONLY the rewritten message with no preamble, labels, or commentary." ;;
   esac
   # A configured language overrides "same language as the message" — it is the
   # last word in the prompt, and it names the language explicitly. The line goes

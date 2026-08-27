@@ -5,6 +5,43 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- A **`caveman` style preset** (`CLAUDISH_STYLE=caveman`, `/claudish style
+  caveman`) alongside `tldr` and `5y`: blunt caveman speak — very short
+  sentences, simple forceful words, no articles, present tense, a grunt where a
+  sentence would only hedge. Like the other presets it replaces the base prompt
+  only, so facts, numbers, file paths, commands, and identifiers are kept exact
+  and fenced code blocks are left alone; a usable `CLAUDISH_PROMPT_FILE` still
+  wins over it, and the output language still applies.
+
+### Changed
+- **Every style now labels its block with its own emoji and marks the word that
+  carries the style in bold**: 💬 In plain **language**:, 📌 **TL;DR**:,
+  👶 Like you're **five**:, 🦴 **Ugh.** Me say:. The emphasis is markdown,
+  rendered by Claude Code itself, deliberately **not** ANSI colour codes: the
+  16-colour codes are palette indices a terminal theme is free to remap onto a
+  grey or onto the background (Solarized maps four of the bright slots to
+  monotones), and raw escapes would also leak as literal bytes into `claude -p`
+  output piped to a file. Bold is an attribute rather than a palette lookup, so
+  it survives every theme and degrades to readable text off-terminal.
+
+### Fixed
+- The **session-start override notice now reports `style=caveman`**. It
+  allowlisted only `tldr` and `5y`, so a `caveman` set by `/claudish style`
+  persisted across sessions with nothing on screen to say so — the one warning
+  that exists for flag files that outlive their session.
+- **A `language` setting can no longer smuggle a terminal escape sequence onto
+  the screen.** `lang.sh` collapsed whitespace but ESC is not whitespace, so a
+  `language` of `$'\033[2J'` in a project's `.claude/settings.json` — a file
+  that travels with the repository and is not necessarily the local user's own
+  text — reached the label verbatim. Control characters are now folded to
+  spaces, by codepoint, before the existing three-word / 30-codepoint caps.
+  The session-start notice printed the language flag file through a `\r\n`-only
+  filter, so it had the same hole on its own surface; it now routes the value
+  through `lang.sh`, which also makes the two agree on the word cap.
+
 ## [0.7.1] - 2026-08-27
 
 ### Fixed
@@ -190,6 +227,10 @@ by Davide Di Pumpo, adapted to the provider layer and language resolver.
 - Optional `PostToolUse` Markdown-file rewrite hook (`rewrite-md.sh`), opt-in by
   directory (`CLAUDISH_MD_DIR`), with `sibling` and `overwrite` modes.
 
+[Unreleased]: https://github.com/gvzdv/claudish-to-english/compare/v0.7.1...HEAD
+[0.7.1]: https://github.com/gvzdv/claudish-to-english/compare/v0.7.0...v0.7.1
+[0.7.0]: https://github.com/gvzdv/claudish-to-english/compare/v0.6.0...v0.7.0
+[0.6.0]: https://github.com/gvzdv/claudish-to-english/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/gvzdv/claudish-to-english/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/gvzdv/claudish-to-english/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/gvzdv/claudish-to-english/compare/v0.3.0...v0.4.0

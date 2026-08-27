@@ -224,7 +224,7 @@ assistant message, mid-session, with nothing to relaunch:
 /claudish off          pause rewrites (originals only; also pauses the Markdown hook)
 /claudish append       show the original, then the rewrite below it
 /claudish replace      show only the rewrite
-/claudish style tldr   rewrite as a short summary (or "5y" = explain like I'm five)
+/claudish style X      rewrite style: tldr | 5y (explain like I'm five) | caveman
 /claudish style        reset to the default plain-language rewrite
 /claudish language fr  rewrite into French (any name, incl. non-Latin like 简体中文)
 /claudish language     reset to the session/settings language (see "Output language")
@@ -287,10 +287,12 @@ speaks Esperanto needs no extra configuration:
 | `<project>/.claude/settings.json` | `"language": "Esperanto"` |
 | `~/.claude/settings.json` | `"language": "Esperanto"` |
 
-The first one that is set wins, and the on-screen label then names it:
-`💬 In plain Esperanto:`. `CLAUDISH_LANG` set but **empty** ignores the settings
-key and goes back to following the input's language; set it to `English` to
-force English on a non-English session.
+The first one that is set wins, and the on-screen label then names it —
+💬 In plain **Esperanto**:
+
+`CLAUDISH_LANG` set but **empty** ignores the settings key and goes back to
+following the input's language; set it to `English` to force English on a
+non-English session.
 
 A configured language is appended to the built-in prompt. A prompt supplied
 through `CLAUDISH_PROMPT_FILE` or `CLAUDISH_MD_PROMPT_FILE` replaces the whole
@@ -313,9 +315,22 @@ Each hook ships with a default system prompt that asks the model for plain
 language while preserving facts, code, and structure.
 
 For a quick change of tone without writing a prompt, the display hook also has
-two **built-in style presets** — `tldr` (a short summary) and `5y` (explain like
-I'm five) — set with [`/claudish style`](#controlling-it-live-claudish) or
-`CLAUDISH_STYLE`. For full control, you can instead **replace** either prompt
+three **built-in style presets** — `tldr` (a short summary), `5y` (explain like
+I'm five), and `caveman` (blunt caveman speak) — set with
+[`/claudish style`](#controlling-it-live-claudish) or
+`CLAUDISH_STYLE`. Each one labels its block with its own emoji, so the style in
+use is visible at a glance:
+
+| style | label |
+|---|---|
+| *(default)* | 💬 In plain **language**: |
+| `tldr` | 📌 **TL;DR**: |
+| `5y` | 👶 Like you're **five**: |
+| `caveman` | 🦴 **Ugh.** Me say: |
+
+The bold word is markdown, rendered by Claude Code itself — no ANSI colour
+codes, so the label cannot be washed out by a terminal colour scheme and stays
+readable when `claude -p` output is piped to a file. For full control, you can instead **replace** either prompt
 with your own to add specific rules or use wording that works better with your
 model (this wins over a style preset). To do so, point the hook at a file that
 holds the prompt:
@@ -374,7 +389,7 @@ rewrites the assistant's message.
 
 | `CLAUDISH_MODE` | On screen | Notes |
 |---|---|---|
-| `append` (default) | Original streams normally, then a `💬 In plain language:` block is appended (`💬 In plain Esperanto:` when a language is configured). | Safest. No streaming loss; if the LLM fails you just don't get the extra block. |
+| `append` (default) | Original streams normally, then a 💬 In plain **language**: block is appended (💬 In plain **Esperanto**: when a language is configured; other styles use their own emoji — see [Customizing the rewrite prompt](#customizing-the-rewrite-prompt)). | Safest. No streaming loss; if the LLM fails you just don't get the extra block. |
 | `replace` | Only the simplified version (original chunks suppressed while streaming). | Experimental. Appears all at once after LLM latency; on failure it re-shows the full original. |
 
 ---
@@ -537,8 +552,8 @@ Notes:
 | `CLAUDISH_OFF_FILE` | `~/.claude/claudish-off` | Runtime kill switch. While this file exists, rewrites pause — re-checked every message, so unlike env vars it works mid-session. See [Toggling mid-session](#toggling-mid-session). |
 | `CLAUDISH_MODE` | `append` | `append` or `replace` (display hook). |
 | `CLAUDISH_MODE_FILE` | `~/.claude/claudish-mode` | Runtime display-mode override: `append`/`replace` in this file wins over `CLAUDISH_MODE`, re-checked every message. Written by `/claudish append`/`replace`. See [Controlling it live](#controlling-it-live-claudish). |
-| `CLAUDISH_STYLE` | *(unset)* | Rewrite-style preset (display hook): `tldr` = a clearly shorter summary, `5y` = explain like I'm five. Unset = the default plain-language rewrite. A usable `CLAUDISH_PROMPT_FILE` wins over any style (custom prompt > style > built-in); the output language still applies. |
-| `CLAUDISH_STYLE_FILE` | `~/.claude/claudish-style` | Runtime style override: `tldr`/`5y` in this file wins over `CLAUDISH_STYLE`, re-checked every message. Written by `/claudish style <tldr\|5y>`. See [Controlling it live](#controlling-it-live-claudish). |
+| `CLAUDISH_STYLE` | *(unset)* | Rewrite-style preset (display hook): `tldr` = a clearly shorter summary, `5y` = explain like I'm five, `caveman` = blunt caveman speak. Unset = the default plain-language rewrite. A usable `CLAUDISH_PROMPT_FILE` wins over any style (custom prompt > style > built-in); the output language still applies. |
+| `CLAUDISH_STYLE_FILE` | `~/.claude/claudish-style` | Runtime style override: `tldr`/`5y`/`caveman` in this file wins over `CLAUDISH_STYLE`, re-checked every message. Written by `/claudish style <tldr\|5y\|caveman>`. See [Controlling it live](#controlling-it-live-claudish). |
 | `CLAUDISH_PROMPT_FILE` | *(unset)* | Path to a file whose contents replace the display hook's system prompt (whole prompt, not merged). Empty/unreadable falls back to the built-in default. See [Customizing the rewrite prompt](#customizing-the-rewrite-prompt). |
 | `CLAUDISH_LANG` | *(unset)* | Language to rewrite into, e.g. `Esperanto`. Unset falls back to the `language` key in `.claude/settings*.json`; with neither set, the rewrite keeps the input's language. Empty ignores the settings key; `English` forces English. See [Output language](#output-language). |
 | `CLAUDISH_LANG_FILE` | `~/.claude/claudish-lang` | Runtime language override: a language name in this file wins over `CLAUDISH_LANG` and the settings key, re-checked every message. Written by `/claudish language <name>`. See [Controlling it live](#controlling-it-live-claudish). |
