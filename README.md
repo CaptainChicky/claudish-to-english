@@ -137,15 +137,15 @@ Directly from this repository (also serves its own marketplace):
 
 ```shell
 /plugin marketplace add gvzdv/claudish-to-english
+```
+```shell
 /plugin install claudish-to-english@gvzdv-plugins
 ```
 
-After review by the Anthropic team, the plugin will be available to install from the community marketplace:
-
-```shell
-/plugin marketplace add anthropics/claude-plugins-community
-/plugin install claudish-to-english@claude-community
-```
+The plugin is `Submitted and pending review` on the Claude Marketplace since August 10.  
+~~After review by the Anthropic team, the plugin will be available to install from the community marketplace:~~  
+~~/plugin marketplace add anthropics/claude-plugins-community~~  
+~~/plugin install claudish-to-english@claude-community~~  
 
 If the install summary says `Run /reload-plugins to activate.`, run that command.
 

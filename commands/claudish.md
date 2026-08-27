@@ -1,7 +1,7 @@
 ---
 description: Show the claudish dashboard, or switch the rewrite on the fly — on, off, append, replace, "style tldr|5y", "language <name>", "model <name>", "last" (reprint the previous original), cycle, or reset. No argument shows the dashboard.
 argument-hint: "[on|off|append|replace|style <tldr|5y|default>|language <name>|model <name>|last|cycle|reset|status]"
-allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}"/claudish-ctl.sh:*)
+allowed-tools: Bash("${CLAUDE_PLUGIN_ROOT}/claudish-ctl.sh":*)
 ---
 
 Claudish, after applying "$ARGUMENTS": !`"${CLAUDE_PLUGIN_ROOT}/claudish-ctl.sh" --stdin-args <<'CLAUDISH_ARGV_EOF'
