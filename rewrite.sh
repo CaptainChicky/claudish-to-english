@@ -19,6 +19,11 @@
 # to rewrite, answer, or repeat the question; only the assistant message is
 # rewritten. Missing/unreadable transcript -> no context, still rewrites.
 #
+# Every rewrite is also told WHOSE voice it is reading: the input is one turn of
+# a conversation, so "I" is the assistant and "you" is the user. That framing is
+# added even over CLAUDISH_PROMPT_FILE, because it is a fact about the input
+# rather than a style choice.
+#
 # FAIL-OPEN CONTRACT: on ANY problem (disabled, no jq, parse error, LLM down,
 # timeout, empty rewrite) we emit nothing and exit 0, which leaves Claude's
 # ORIGINAL text on screen. A display hook must never be able to swallow the
@@ -305,6 +310,14 @@ else
       dbg "CLAUDISH_PROMPT_FILE set but empty/unreadable ($CLAUDISH_PROMPT_FILE); using default prompt"
     fi
   fi
+
+  # Frames the INPUT for every rewrite: the text is one turn of a conversation,
+  # so its pronouns are anchored to speakers the model cannot see. Without this,
+  # "I" drifts onto the rewriter and "you" onto the assistant, and the rewrite
+  # flips the roles. Deliberately AFTER the prompt-file override, unlike the
+  # language line: this is a fact about the input, not a style choice, so a
+  # custom prompt does not get to be wrong about it.
+  sys="$sys"$'\n\n'"The text you are given is a message the assistant wrote to the user. In it, \"I\", \"me\", and \"my\" refer to the assistant; \"you\" and \"your\" refer to the user. Keep that same point of view in the rewrite — never swap the two, and never address the assistant."
 
   # Context only: the original user question the assistant is answering.
   # Truncated to 800 codepoints inside jq (safe on multibyte boundaries).
