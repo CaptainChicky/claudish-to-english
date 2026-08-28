@@ -18,6 +18,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   being things anyone has to remember. `.claude/settings.local.json` is now
   gitignored; `.claude/skills/` is tracked.
 
+### Changed
+- **Every rewrite prompt now states whose voice it is reading**: the input is
+  one turn of a conversation, so the model is told that "I"/"me"/"my" are the
+  assistant and "you"/"your" are the user, and that the rewrite must keep that
+  point of view. Without it the pronouns had nothing to anchor to and rewrites
+  could invert the roles — reading "I" as the rewriter, or addressing the
+  assistant instead of the user. The line is added after the
+  `CLAUDISH_PROMPT_FILE` override rather than before it (where the output
+  language sits): a custom prompt legitimately replaces style and language
+  choices, but this is a fact about the input, so it applies to every rewrite —
+  default, style preset, and custom prompt alike.
+
 ## [0.8.0] - 2026-08-27
 
 ### Added
